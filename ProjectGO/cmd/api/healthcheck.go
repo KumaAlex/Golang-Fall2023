@@ -1,14 +1,55 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
 	"net/http"
 )
 
-// Declare a handler which writes a plain-text response with information about the
-// application status, operating environment and version.
 func (app *application) healthcheckHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "status: available")
-	fmt.Fprintf(w, "environment: %s\n", app.config.env)
-	fmt.Fprintf(w, "version: %s\n", version)
+	env := envelope{
+		"status": "available",
+		"system_info": map[string]string{
+			"environment": app.config.env,
+			"version":     version,
+		},
+	}
+	err := app.writeJSON(w, http.StatusOK, env, nil)
+	if err != nil {
+		// Use the new serverErrorResponse() helper.
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
+func healthcheckHandlerEncoder(w http.ResponseWriter, r *http.Request) {
+	data := map[string]string{
+		"status":      "available",
+		"environment": "development",
+		"version":     "1.0.0",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	err := json.NewEncoder(w).Encode(data)
+	if err != nil {
+		http.Error(w, "The server encountered a problem and could not process your request", http.StatusInternalServerError)
+	}
+}
+
+func healthcheckHandlerMarshal(w http.ResponseWriter, r *http.Request) {
+	data := map[string]string{
+		"status":      "available",
+		"environment": "development",
+		"version":     "1.0.0",
+	}
+
+	js, err := json.Marshal(data)
+	if err != nil {
+		http.Error(w, "The server encountered a problem and could not process your request", http.StatusInternalServerError)
+		return
+	}
+
+	js = append(js, '\n')
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
 }
