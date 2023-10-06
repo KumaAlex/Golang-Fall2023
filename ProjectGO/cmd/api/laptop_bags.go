@@ -2,13 +2,43 @@ package main
 
 import (
 	"ProjectGO/internal/data"
+	"ProjectGO/internal/validator"
 	"fmt"
 	"net/http"
 	"time"
 )
 
 func (app *application) createLaptopBagHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "create a new LaptopBag")
+	var input struct {
+		Brand      string      `json:"brand"`
+		Color      string      `json:"color"`
+		Weight     data.Weight `json:"weight"`
+		Dimensions []float32   `json:"dimensions"`
+	}
+	err := app.readJSON(w, r, &input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	laptopBag := &data.LaptopBag{
+		Brand:      input.Brand,
+		Color:      input.Color,
+		Weight:     input.Weight,
+		Dimensions: input.Dimensions,
+	}
+
+	v := validator.New()
+
+	// Call the ValidateMovie() function and return a response containing the errors if
+	// any of the checks fail.
+	if data.ValidateMovie(v, laptopBag); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	// Dump the contents of the input struct in a HTTP response.
+	fmt.Fprintf(w, "%+v\n", input)
 }
 
 func (app *application) showLaptopBagHandler(w http.ResponseWriter, r *http.Request) {
