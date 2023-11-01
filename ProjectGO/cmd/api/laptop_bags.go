@@ -3,9 +3,9 @@ package main
 import (
 	"ProjectGO/internal/data"
 	"ProjectGO/internal/validator"
+	"errors"
 	"fmt"
 	"net/http"
-	"time"
 )
 
 func (app *application) createLaptopBagHandler(w http.ResponseWriter, r *http.Request) {
@@ -30,36 +30,123 @@ func (app *application) createLaptopBagHandler(w http.ResponseWriter, r *http.Re
 
 	v := validator.New()
 
-	// Call the ValidateMovie() function and return a response containing the errors if
-	// any of the checks fail.
-	if data.ValidateMovie(v, laptopBag); !v.Valid() {
+	if data.ValidateLaptopBag(v, laptopBag); !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
 
-	// Dump the contents of the input struct in a HTTP response.
-	fmt.Fprintf(w, "%+v\n", input)
+	err = app.models.LaptopBags.Insert(laptopBag)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	headers := make(http.Header)
+	headers.Set("Location", fmt.Sprintf("/v1/laptopBags/%d", laptopBag.ID))
+
+	err = app.writeJSON(w, http.StatusCreated, envelope{"laptopBag": laptopBag}, headers)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+
 }
 
 func (app *application) showLaptopBagHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := app.readIDParam(r)
 	if err != nil {
-		http.NotFound(w, r)
+		app.notFoundResponse(w, r)
 		return
 	}
-	laptopBag := data.LaptopBag{
-		ID:           id,
-		CreatedAt:    time.Now(),
-		Brand:        "Urban lifestyle",
-		Model:        "Day Back",
-		Color:        "yellow",
-		Material:     "cloth",
-		Compartments: 2,
-		Weight:       0.230,
-		Dimensions:   []float32{11.4, 5.1, 14.2},
+
+	laptopBag, err := app.models.LaptopBags.Get(id)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
 	}
-	// Encode the struct to JSON and send it as the HTTP response.
 	err = app.writeJSON(w, http.StatusOK, envelope{"laptopBag": laptopBag}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+
+}
+
+func (app *application) updateLaptopBagHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := app.readIDParam(r)
+	if err != nil {
+		app.notFoundResponse(w, r)
+		return
+	}
+
+	laptopBag, err := app.models.LaptopBags.Get(id)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	var input struct {
+		Brand      string      `json:"brand"`
+		Color      string      `json:"color"`
+		Weight     data.Weight `json:"weight"`
+		Dimensions []float32   `json:"dimensions"`
+	}
+
+	err = app.readJSON(w, r, &input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	laptopBag.Brand = input.Brand
+	laptopBag.Color = input.Color
+	laptopBag.Weight = input.Weight
+	laptopBag.Dimensions = input.Dimensions
+
+	v := validator.New()
+	if data.ValidateLaptopBag(v, laptopBag); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	err = app.models.LaptopBags.Update(laptopBag)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"laptopBag": laptopBag}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
+func (app *application) deleteLaptopBagHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := app.readIDParam(r)
+	if err != nil {
+		app.notFoundResponse(w, r)
+		return
+	}
+	err = app.models.LaptopBags.Delete(id)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"message": "laptop bag successfully deleted"}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}

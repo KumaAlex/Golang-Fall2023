@@ -1,16 +1,17 @@
 package main
 
 import (
+	"ProjectGO/internal/data"
 	"context"
 	"database/sql"
 	"flag"
 	"fmt"
+	_ "github.com/lib/pq"
 	"log"
 	"net/http"
 	"os"
 	"time"
 )
-import _ "github.com/lib/pq"
 
 const version = "1.0.0"
 
@@ -28,10 +29,12 @@ type config struct {
 type application struct {
 	config config
 	logger *log.Logger
+	models data.Models
 }
 
 func main() {
 	var cfg config
+
 	flag.IntVar(&cfg.port, "port", 4000, "API server port")
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
 	flag.StringVar(&cfg.db.dsn, "db-dsn", os.Getenv("GREENLIGHT_DB_DSN"), "PostgreSQL DSN")
@@ -50,10 +53,13 @@ func main() {
 	defer db.Close()
 
 	logger.Printf("database connection pool established")
+
 	app := &application{
 		config: cfg,
 		logger: logger,
+		models: data.NewModels(db),
 	}
+
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.port),
 		Handler:      app.routes(),
