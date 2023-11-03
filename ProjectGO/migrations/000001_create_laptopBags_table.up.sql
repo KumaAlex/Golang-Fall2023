@@ -8,5 +8,6 @@ CREATE TABLE IF NOT EXISTS laptopBags
     material     text DEFAULT 'fabric',
     compartments integer DEFAULT 3,
     weight       numeric(8,2) NOT NULL,
-    dimensions   numeric(8,2)[] NOT NULL
+    dimensions   numeric(8,2)[] NOT NULL,
+    version integer NOT NULL DEFAULT 1
 );
