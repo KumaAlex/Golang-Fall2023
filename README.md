@@ -19,10 +19,16 @@ curl -i -d "$BODY" localhost:4000/v1/laptopBags
 BODY='{"brand":"Nig","color":"black","weight":"0.1 kg", "Dimensions":[4,5,6]}' <br>
 curl -i -d "$BODY" localhost:4000/v1/laptopBags
 
-UPDATE
+UPDATE -> PATCH
 
 BODY='{"brand":"Urban lifestyle","color":"black","weight":"69 kg", "Dimensions":[10,16,41.6]}' <br>
 curl -X PUT -d "$BODY" localhost:4000/v1/laptopBags/1
+
+->
+
+xargs -I % -P8 curl -X PATCH -d '{"weight": "100 kg"}' "localhost:4000/v1/laptopBags/1" < <(printf '%s\n' {1..8})
+
+curl -X PATCH -d '{"weight": "100 kg"}' "localhost:4000/v1/laptopBags/1"
 
 GET
 
