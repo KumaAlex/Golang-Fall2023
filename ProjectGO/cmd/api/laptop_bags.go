@@ -61,7 +61,7 @@ func (app *application) showLaptopBagHandler(w http.ResponseWriter, r *http.Requ
 	laptopBag, err := app.models.LaptopBags.Get(id)
 	if err != nil {
 		switch {
-		case errors.Is(err, data.ErrRecordNotFound):
+		case errors.Is(err, data.ErrBagNotFound):
 			app.notFoundResponse(w, r)
 		default:
 			app.serverErrorResponse(w, r, err)
@@ -85,7 +85,7 @@ func (app *application) updateLaptopBagHandler(w http.ResponseWriter, r *http.Re
 	laptopBag, err := app.models.LaptopBags.Get(id)
 	if err != nil {
 		switch {
-		case errors.Is(err, data.ErrRecordNotFound):
+		case errors.Is(err, data.ErrBagNotFound):
 			app.notFoundResponse(w, r)
 		default:
 			app.serverErrorResponse(w, r, err)
@@ -138,7 +138,7 @@ func (app *application) deleteLaptopBagHandler(w http.ResponseWriter, r *http.Re
 	err = app.models.LaptopBags.Delete(id)
 	if err != nil {
 		switch {
-		case errors.Is(err, data.ErrRecordNotFound):
+		case errors.Is(err, data.ErrBagNotFound):
 			app.notFoundResponse(w, r)
 		default:
 			app.serverErrorResponse(w, r, err)

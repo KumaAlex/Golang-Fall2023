@@ -18,6 +18,7 @@ type LaptopBag struct {
 	Compartments int32     `json:"compartments,omitempty"`
 	Weight       Weight    `json:"weight,omitempty"`
 	Dimensions   []float32 `json:"dimensions,omitempty"`
+	Version      int32     `json:"version"`
 }
 
 func ValidateLaptopBag(v *validator.Validator, laptopBag *LaptopBag) {
@@ -39,20 +40,20 @@ func (l LaptopBagModel) Insert(laptopBag *LaptopBag) error {
 	query := `
 		INSERT INTO laptopBags (brand, color, weight, dimensions)
 		VALUES ($1, $2, $3, $4)
-		RETURNING id, created_at`
+		RETURNING id, created_at, version`
 
 	args := []interface{}{laptopBag.Brand, laptopBag.Color, laptopBag.Weight, pq.Array(laptopBag.Dimensions)}
 
-	return l.DB.QueryRow(query, args...).Scan(&laptopBag.ID, &laptopBag.CreatedAt)
+	return l.DB.QueryRow(query, args...).Scan(&laptopBag.ID, &laptopBag.CreatedAt, &laptopBag.Version)
 }
 
 func (l LaptopBagModel) Get(id int64) (*LaptopBag, error) {
 	if id < 1 {
-		return nil, ErrRecordNotFound
+		return nil, ErrBagNotFound
 	}
 
 	query := `
-		SELECT id, Created_at, Brand, Model, Color, Material, Compartments, Weight, Dimensions
+		SELECT id, Created_at, Brand, Model, Color, Material, Compartments, Weight, Dimensions, Version
 		FROM laptopbags
 		WHERE id = $1`
 
@@ -68,12 +69,13 @@ func (l LaptopBagModel) Get(id int64) (*LaptopBag, error) {
 		&laptopbag.Compartments,
 		&laptopbag.Weight,
 		pq.Array(&laptopbag.Dimensions),
+		&laptopbag.Version,
 	)
 
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
-			return nil, ErrRecordNotFound
+			return nil, ErrBagNotFound
 		default:
 			return nil, err
 		}
@@ -85,9 +87,9 @@ func (l LaptopBagModel) Get(id int64) (*LaptopBag, error) {
 func (l LaptopBagModel) Update(laptopBag *LaptopBag) error {
 	query := `
 		UPDATE laptopBags
-		SET brand = $1, color = $2, weight = $3, dimensions = $4
+		SET brand = $1, color = $2, weight = $3, dimensions = $4, version = version + 1
 		WHERE id = $5
-		RETURNING ID`
+		RETURNING version`
 
 	args := []interface{}{
 		laptopBag.Brand,
@@ -98,13 +100,13 @@ func (l LaptopBagModel) Update(laptopBag *LaptopBag) error {
 	}
 	// Use the QueryRow() method to execute the query, passing in the args slice as a
 	// variadic parameter and scanning the new version value into the movie struct.
-	return l.DB.QueryRow(query, args...).Scan(&laptopBag.ID)
+	return l.DB.QueryRow(query, args...).Scan(&laptopBag.Version)
 
 }
 
 func (l LaptopBagModel) Delete(id int64) error {
 	if id < 1 {
-		return ErrRecordNotFound
+		return ErrBagNotFound
 	}
 
 	query := `
@@ -122,7 +124,7 @@ func (l LaptopBagModel) Delete(id int64) error {
 	}
 
 	if rowsAffected == 0 {
-		return ErrRecordNotFound
+		return ErrBagNotFound
 	}
 	return nil
 }
