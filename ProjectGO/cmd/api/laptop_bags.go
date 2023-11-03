@@ -94,10 +94,10 @@ func (app *application) updateLaptopBagHandler(w http.ResponseWriter, r *http.Re
 	}
 
 	var input struct {
-		Brand      string      `json:"brand"`
-		Color      string      `json:"color"`
-		Weight     data.Weight `json:"weight"`
-		Dimensions []float32   `json:"dimensions"`
+		Brand      *string      `json:"brand"`
+		Color      *string      `json:"color"`
+		Weight     *data.Weight `json:"weight"`
+		Dimensions []float32    `json:"dimensions"`
 	}
 
 	err = app.readJSON(w, r, &input)
@@ -106,10 +106,18 @@ func (app *application) updateLaptopBagHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	laptopBag.Brand = input.Brand
-	laptopBag.Color = input.Color
-	laptopBag.Weight = input.Weight
-	laptopBag.Dimensions = input.Dimensions
+	if input.Brand != nil {
+		laptopBag.Brand = *input.Brand
+	}
+	if input.Color != nil {
+		laptopBag.Color = *input.Color
+	}
+	if input.Weight != nil {
+		laptopBag.Weight = *input.Weight
+	}
+	if input.Dimensions != nil {
+		laptopBag.Dimensions = input.Dimensions
+	}
 
 	v := validator.New()
 	if data.ValidateLaptopBag(v, laptopBag); !v.Valid() {
@@ -119,10 +127,14 @@ func (app *application) updateLaptopBagHandler(w http.ResponseWriter, r *http.Re
 
 	err = app.models.LaptopBags.Update(laptopBag)
 	if err != nil {
-		app.serverErrorResponse(w, r, err)
+		switch {
+		case errors.Is(err, data.ErrEditConflict):
+			app.editConflictResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
 		return
 	}
-
 	err = app.writeJSON(w, http.StatusOK, envelope{"laptopBag": laptopBag}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)

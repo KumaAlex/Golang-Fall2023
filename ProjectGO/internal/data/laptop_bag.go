@@ -2,6 +2,7 @@ package data
 
 import (
 	"ProjectGO/internal/validator"
+	"context"
 	"database/sql"
 	"errors"
 	"github.com/lib/pq"
@@ -44,7 +45,10 @@ func (l LaptopBagModel) Insert(laptopBag *LaptopBag) error {
 
 	args := []interface{}{laptopBag.Brand, laptopBag.Color, laptopBag.Weight, pq.Array(laptopBag.Dimensions)}
 
-	return l.DB.QueryRow(query, args...).Scan(&laptopBag.ID, &laptopBag.CreatedAt, &laptopBag.Version)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	return l.DB.QueryRowContext(ctx, query, args...).Scan(&laptopBag.ID, &laptopBag.CreatedAt, &laptopBag.Version)
 }
 
 func (l LaptopBagModel) Get(id int64) (*LaptopBag, error) {
@@ -59,7 +63,11 @@ func (l LaptopBagModel) Get(id int64) (*LaptopBag, error) {
 
 	var laptopbag LaptopBag
 
-	err := l.DB.QueryRow(query, id).Scan(
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+
+	defer cancel()
+
+	err := l.DB.QueryRowContext(ctx, query, id).Scan(
 		&laptopbag.ID,
 		&laptopbag.CreatedAt,
 		&laptopbag.Brand,
@@ -88,7 +96,7 @@ func (l LaptopBagModel) Update(laptopBag *LaptopBag) error {
 	query := `
 		UPDATE laptopBags
 		SET brand = $1, color = $2, weight = $3, dimensions = $4, version = version + 1
-		WHERE id = $5
+		WHERE id = $5 AND version = $6
 		RETURNING version`
 
 	args := []interface{}{
@@ -97,11 +105,22 @@ func (l LaptopBagModel) Update(laptopBag *LaptopBag) error {
 		laptopBag.Weight,
 		pq.Array(laptopBag.Dimensions),
 		laptopBag.ID,
+		laptopBag.Version,
 	}
-	// Use the QueryRow() method to execute the query, passing in the args slice as a
-	// variadic parameter and scanning the new version value into the movie struct.
-	return l.DB.QueryRow(query, args...).Scan(&laptopBag.Version)
 
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := l.DB.QueryRowContext(ctx, query, args...).Scan(&laptopBag.Version)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrEditConflict
+		default:
+			return err
+		}
+	}
+	return nil
 }
 
 func (l LaptopBagModel) Delete(id int64) error {
@@ -113,7 +132,10 @@ func (l LaptopBagModel) Delete(id int64) error {
 		DELETE FROM laptopbags
 		WHERE id = $1`
 
-	result, err := l.DB.Exec(query, id)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	result, err := l.DB.ExecContext(ctx, query, id)
 	if err != nil {
 		return err
 	}

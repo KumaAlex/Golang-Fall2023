@@ -6,7 +6,8 @@ import (
 )
 
 var (
-	ErrBagNotFound = errors.New("bag not found")
+	ErrBagNotFound  = errors.New("bag not found")
+	ErrEditConflict = errors.New("edit conflict")
 )
 
 type Models struct {
