@@ -46,7 +46,7 @@ curl -X DELETE localhost:4000/v1/laptopBags/3
 curl "localhost:4000/v1/laptopBags?brand=Nig&color=black&page=1&page_size=5"
 
 
-$ 4. Check limits:
+# 4. Check limits:
 
 go run ./cmd/api/ -limiter-burst=2
 
