@@ -163,3 +163,43 @@ func (app *application) deleteLaptopBagHandler(w http.ResponseWriter, r *http.Re
 		app.serverErrorResponse(w, r, err)
 	}
 }
+
+func (app *application) listLaptopBagsHandler(w http.ResponseWriter, r *http.Request) {
+
+	var input struct {
+		Brand string
+		Color string
+		data.Filters
+	}
+
+	v := validator.New()
+
+	qs := r.URL.Query()
+
+	input.Brand = app.readString(qs, "brand", "")
+	input.Color = app.readString(qs, "color", "")
+
+	input.Filters.Page = app.readInt(qs, "page", 1, v)
+	input.Filters.PageSize = app.readInt(qs, "page_size", 20, v)
+
+	input.Filters.Sort = app.readString(qs, "sort", "id")
+
+	input.Filters.SortSafelist = []string{"id", "brand", "color", "model", "material", "compartments", "-id", "-brand", "-color", "-model", "-material", "-compartments"}
+
+	if data.ValidateFilters(v, input.Filters); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	laptopBags, metadata, err := app.models.LaptopBags.GetAll(input.Brand, input.Color, input.Filters)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"laptopBags": laptopBags, "metadata": metadata}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+
+}

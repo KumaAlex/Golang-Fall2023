@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"github.com/lib/pq"
 	"time"
 )
@@ -149,4 +150,62 @@ func (l LaptopBagModel) Delete(id int64) error {
 		return ErrBagNotFound
 	}
 	return nil
+}
+
+func (l LaptopBagModel) GetAll(brand string, color string, filters Filters) ([]*LaptopBag, Metadata, error) {
+
+	query := fmt.Sprintf(`
+		SELECT count(*) OVER(), id, created_at, brand, model, color, material, compartments, weight, dimensions, version
+		FROM laptopbags
+		WHERE (to_tsvector('simple', brand) @@ plainto_tsquery('simple', $1) OR $1 = '')
+		AND (to_tsvector('simple', color) @@ plainto_tsquery('simple', $2) OR $2 = '')
+		ORDER BY %s %s, id ASC 
+		LIMIT $3 OFFSET $4`, filters.sortColumn(), filters.sortDirection())
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	args := []interface{}{brand, color, filters.limit(), filters.offset()}
+
+	rows, err := l.DB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, Metadata{}, err
+	}
+
+	defer rows.Close()
+
+	totalBags := 0
+	laptopBags := []*LaptopBag{}
+
+	for rows.Next() {
+
+		var laptopbag LaptopBag
+
+		err := rows.Scan(
+			&totalBags,
+			&laptopbag.ID,
+			&laptopbag.CreatedAt,
+			&laptopbag.Brand,
+			&laptopbag.Model,
+			&laptopbag.Color,
+			&laptopbag.Material,
+			&laptopbag.Compartments,
+			&laptopbag.Weight,
+			pq.Array(&laptopbag.Dimensions),
+			&laptopbag.Version,
+		)
+		if err != nil {
+			return nil, Metadata{}, err
+		}
+
+		laptopBags = append(laptopBags, &laptopbag)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, Metadata{}, err
+	}
+
+	metadata := calculateMetadata(totalBags, filters.Page, filters.PageSize)
+
+	return laptopBags, metadata, nil
 }

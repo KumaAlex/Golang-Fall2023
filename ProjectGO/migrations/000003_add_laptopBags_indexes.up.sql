@@ -1,0 +1,2 @@
+CREATE INDEX IF NOT EXISTS laptopBags_brand_idx ON laptopBags USING GIN (to_tsvector('simple', brand));
+CREATE INDEX IF NOT EXISTS laptopBags_color_idx ON laptopBags USING GIN (to_tsvector('simple', color));
