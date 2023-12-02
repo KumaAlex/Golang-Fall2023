@@ -14,7 +14,7 @@ RUN go get -v -u github.com/golang-migrate/migrate/v4
 COPY . ./
 
 # Build
-RUN go build -o bin ./cmd/api/
+RUN go build -o main ./cmd/api/
 
 # Optional:
 # To bind to a TCP port, runtime parameters must be supplied to the docker command.
@@ -26,4 +26,4 @@ EXPOSE 5432
 
 # Run
 CMD ["migrate -path ./migrations -database postgres://greenlight:pa55word@db:5432/greenlight?sslmode=disable up"]
-CMD ["./bin"]
+CMD ["./main"]
