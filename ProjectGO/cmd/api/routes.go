@@ -14,11 +14,11 @@ func (app *application) routes() http.Handler {
 
 	router.HandlerFunc(http.MethodGet, "/v1/healthcheck", app.healthcheckHandler)
 
-	router.HandlerFunc(http.MethodGet, "/v1/laptopBags", app.listLaptopBagsHandler)
-	router.HandlerFunc(http.MethodPost, "/v1/laptopBags", app.createLaptopBagHandler)
-	router.HandlerFunc(http.MethodGet, "/v1/laptopBags/:id", app.showLaptopBagHandler)
-	router.HandlerFunc(http.MethodPatch, "/v1/laptopBags/:id", app.updateLaptopBagHandler)
-	router.HandlerFunc(http.MethodDelete, "/v1/laptopBags/:id", app.deleteLaptopBagHandler)
+	router.HandlerFunc(http.MethodGet, "/v1/laptopBags", app.requirePermission("laptopBags:read", app.listLaptopBagsHandler))
+	router.HandlerFunc(http.MethodPost, "/v1/laptopBags", app.requirePermission("laptopBags:write", app.createLaptopBagHandler))
+	router.HandlerFunc(http.MethodGet, "/v1/laptopBags/:id", app.requirePermission("laptopBags:read", app.showLaptopBagHandler))
+	router.HandlerFunc(http.MethodPatch, "/v1/laptopBags/:id", app.requirePermission("laptopBags:write", app.updateLaptopBagHandler))
+	router.HandlerFunc(http.MethodDelete, "/v1/laptopBags/:id", app.requirePermission("laptopBags:write", app.deleteLaptopBagHandler))
 
 	router.HandlerFunc(http.MethodPost, "/v1/users", app.registerUserHandler)
 	router.HandlerFunc(http.MethodPut, "/v1/users/activated", app.activateUserHandler)
