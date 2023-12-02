@@ -10,6 +10,7 @@ import (
 	_ "github.com/lib/pq"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -38,6 +39,10 @@ type config struct {
 		username string
 		password string
 		sender   string
+	}
+
+	cors struct {
+		trustedOrigins []string
 	}
 }
 
@@ -68,6 +73,11 @@ func main() {
 	flag.StringVar(&cfg.smtp.username, "smtp-username", "ae86fb1534a7af", "SMTP username")
 	flag.StringVar(&cfg.smtp.password, "smtp-password", "a22b80f6e49b22", "SMTP password")
 	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "LaptopBagsWorld <no-reply@ProjectGo>", "SMTP sender")
+
+	flag.Func("cors-trusted-origins", "Trusted CORS origins (space separated)", func(val string) error {
+		cfg.cors.trustedOrigins = strings.Fields(val)
+		return nil
+	})
 
 	flag.Parse()
 
